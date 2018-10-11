@@ -69,12 +69,13 @@ void init_mote() {
 	mote_humidity = 13;
 	mote_soil_moisture = 70;
 	mote_battery = 100;
-	mote_alarm = 0;
+	//mote_alarm = 0;
 }
 
 static struct ctimer ct;	/**< Counter. for callback timer*/
 
-static void ctimer_callback(void *ptr) {
+static void ctimer_callback(void *ptr) 
+{
 	// Mote battery consumption every 10 ticks
 	if(mote_battery > 1) {
 		battery_tick++;
@@ -85,7 +86,7 @@ static void ctimer_callback(void *ptr) {
 			else
 				mote_battery -= 1;
 			battery_tick = 0;
-		
+			resource_battery.trigger();
 		}
 	}
 	// simulation of the cultivation field features
@@ -104,7 +105,9 @@ static void ctimer_callback(void *ptr) {
 PROCESS(server, "CoAP Server");
 AUTOSTART_PROCESSES(&server);
 
-PROCESS_THREAD(server, ev, data) {
+
+PROCESS_THREAD(server, ev, data) 
+{
 	PROCESS_BEGIN();
 
 	PROCESS_PAUSE();
@@ -119,7 +122,7 @@ PROCESS_THREAD(server, ev, data) {
 	rest_activate_resource(&resource_temperature, "temperature");
 	rest_activate_resource(&resource_humidity, "humidity");
 	rest_activate_resource(&resource_soil_moisture, "soil_moisture");
-	rest_activate_resource(&resource_alarm, "alarm");
+	//rest_activate_resource(&resource_alarm, "alarm");
 
 	ctimer_set(&ct, 60*10*CLOCK_SECOND, ctimer_callback, NULL);
 	while(1) {

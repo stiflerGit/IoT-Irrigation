@@ -18,9 +18,9 @@ extern int mote_battery;
 
 static void battery_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 static void battery_put_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-static void battery_event_handler();
+static void battery_periodic_handler();
 
-EVENT_RESOURCE(resource_battery, "title=\"battery\";rt=\"Text\";obs", battery_get_handler, NULL, battery_put_handler, NULL, battery_event_handler);
+EVENT_RESOURCE(resource_battery, "title=\"battery\";rt=\"Text\";obs", battery_get_handler, NULL, battery_put_handler, NULL, battery_periodic_handler);
 
 static void battery_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset) {
 	/* Populat the buffer with the response payload */
@@ -46,13 +46,12 @@ static void battery_put_handler(void* request, void* response, uint8_t *buffer, 
 		new_value = atoi(val);
 		PRINTF("new value %d\n", new_value);
 		mote_battery = new_value;
-		battery_event_handler();
 		REST.set_response_status(response, REST.status.CREATED);
 	} else {
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
 	}
 }
 
-static void battery_event_handler() {
+static void battery_periodic_handler() {
 	REST.notify_subscribers(&resource_battery);
 }
