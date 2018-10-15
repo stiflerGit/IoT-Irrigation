@@ -5,7 +5,7 @@ all: coap-server
 
 SMALL=1
 
-CONTIKI = ../../contiki/
+CONTIKI = /home/osboxes/contiki
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 REST_RESOURCES_DIR = ./resources

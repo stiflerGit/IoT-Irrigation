@@ -1,0 +1,4 @@
+obj_*
+*.cooja
+symbols.c
+symbols.h
