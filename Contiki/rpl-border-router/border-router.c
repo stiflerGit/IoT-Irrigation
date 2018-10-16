@@ -50,6 +50,7 @@
 #include "dev/slip.h"
 
 #include "rest-engine.h"
+#include "rl.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -466,14 +467,6 @@ PROCESS_THREAD(border_router_process, ev, data)
 static int32_t	last_byte = 0;
 static char	message[MAX_ADDR*MAX_ADDR_LENGTH + SEP_LENGTH + 13];
 
-static char	routes[MAX_ADDR][MAX_ADDR_LENGTH];
-static int	nroutes;
-
-/**
- * @brief	Given the contiki struct for IPv6 addresses returns it as a human readable string
- * @param[in]	r	pointer to a contiki struct representation for IPv6 struct
- * @param[out]	buf	buffer where the IPv6 human readable string is written
- */
 static void get_addr(const uip_ipaddr_t *addr, char *out)
 {
 uint16_t	a;
@@ -497,28 +490,15 @@ char		num[3];
 	}
 }
 
-void build_routes() 
-{
-uip_ds6_route_t		*r;
-int			i;
-char			addr[256];
-
-	for (r = uip_ds6_route_head(), i=0; r != NULL && i<MAX_ADDR; r = uip_ds6_route_next(r), i++) {
-		get_addr(&r->ipaddr, addr);
-		strcpy(routes[i], addr);
-	}
-	nroutes = i;
-}
-
 void build_message() 
 {
-int	i;
+struct route_t *r;
 
 	sprintf(message, "{'routes':['");
-	for (i = 0; i < nroutes; i++) {
-		if (i != 0)
+	for (r = rl_head(); r != NULL; r = rl_next(r)) {
+		if (r != rl_head())
 			strcat(message, "','");
-		strcat(message, routes[i]);
+		strcat(message, r->str);
 	}
 	strcat(message, "']}");
 }
@@ -527,7 +507,7 @@ int	i;
 static void get_handler(void *request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 static void evt_handler();
 
-EVENT_RESOURCE(resource_addresses, "title=\"addr\";rt=\"Data\";obs", get_handler, NULL, NULL, NULL, evt_handler);
+EVENT_RESOURCE(resource_motes_addr, "title=\"motes_addr\";rt=\"Data\";obs", get_handler, NULL, NULL, NULL, evt_handler);
 
 /*---------------------------------------------------------------------------*/
 static void get_handler(void *request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset) 
@@ -558,44 +538,41 @@ int32_t	length;		/* length of the addresses message */
 }
 /*---------------------------------------------------------------------------*/
 static void evt_handler() {
-	REST.notify_subscribers(&resource_addresses);
+	REST.notify_subscribers(&resource_motes_addr);
 }
 
 static void route_callback(int evt, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int numroutes)
 {
 char	addr[256];
+int	i;
 
 	if(evt == UIP_DS6_NOTIFICATION_ROUTE_ADD){
 		PRINTA("AGGIUNTO \n");
-		//build_routes();
 		get_addr(route, addr);
-		strcat(addr, "\n");
-		PRINTA(addr);
-		//strcpy(routes[nroutes++], addr);
-		//resource_addresses.trigger();
+		rl_add(addr);
+		rl_print();
+		//resource_motes_addr.trigger();
 	} else if(evt == UIP_DS6_NOTIFICATION_ROUTE_RM){
-		PRINTA("RIMOSSO\n");
-	}
+			PRINTA("RIMOSSO\n");
+			get_addr(route, addr);
+			rl_rm(addr);
+			rl_print();
+		}
 }
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(border_router_coap, ev, data) 
 {
 static struct	uip_ds6_notification n;
-struct etimer	et;
 
 	PROCESS_BEGIN();
-	// wait 20 seconds
-	//etimer_set(&et, CLOCK_SECOND*20);
-	//PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-	// build the initial topology
-	build_routes();
-	build_message();
+	// initialize the routes list
+	rl_init();
 	// set the new route callback
 	uip_ds6_notification_add(&n, route_callback);
 	// initialize coap resource
 	rest_init_engine();
-	rest_activate_resource(&resource_addresses, "addresses");
+	rest_activate_resource(&resource_motes_addr, "motes_addr");
 
 	while(1){
 		PROCESS_WAIT_EVENT();

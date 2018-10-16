@@ -8,6 +8,7 @@ SMALL=1
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 PROJECT_SOURCEFILES += slip-bridge.c
+PROJECT_SOURCEFILES += rl.c
 APPS += er-coap
 APPS += rest-engine
 
