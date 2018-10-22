@@ -1,4 +1,9 @@
 obj_*
+
 *.cooja
+*.z1
+
+contiki-z1.*
+
 symbols.c
 symbols.h
