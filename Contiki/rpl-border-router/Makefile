@@ -1,14 +1,15 @@
-CONTIKI_PROJECT=border-router
+CONTIKI_PROJECT=border-router-coap
 all: $(CONTIKI_PROJECT) 
 
-CONTIKI= /home/osboxes/contiki/
+CONTIKI= /home/osboxes/contiki-3.0/
 
 #linker optimizations
 SMALL=1
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
 PROJECT_SOURCEFILES += slip-bridge.c
-PROJECT_SOURCEFILES += rl.c
+
 APPS += er-coap
 APPS += rest-engine
 
@@ -24,20 +25,7 @@ APPS += rest-engine
 #of the slip connection. Large MSS together with low baud rates without flow
 #control will overrun the transmit buffer when the style sheet is requested.
 
-ifeq ($(MAKE_WITH_NON_STORING),1)
-CFLAGS += -DWITH_NON_STORING=1
-endif
 
-WITH_WEBSERVER=1
-ifeq ($(WITH_WEBSERVER),1)
-CFLAGS += -DUIP_CONF_TCP=1
-CFLAGS += -DWEBSERVER=1
-PROJECT_SOURCEFILES += httpd-simple.c
-else ifneq ($(WITH_WEBSERVER), 0)
-APPS += $(WITH_WEBSERVER)
-CFLAGS += -DUIP_CONF_TCP=1
-CFLAGS += -DWEBSERVER=2
-endif
 
 ifeq ($(PREFIX),)
  PREFIX = fd00::1/64

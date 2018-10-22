@@ -20,32 +20,34 @@
 /* Maximum number of address */
 #define MAX_ADDR		4
 /* Maximum length of the address plus the ":" separators */
-#define MAX_ADDR_LENGTH	32 + 7
+#define MAX_ADDR_LENGTH		32 + 7
 /* Number of chars for the address separators ("," and "'") */
 #define SEP_LENGTH		(MAX_ADDR - 1) + (MAX_ADDR * 2)
 /* Number of chars for the JSON key and parenthesis {'routes':['']} */
 #define JSON_LENGTH		15
 
-
 static uip_ipaddr_t 	prefix;
-static uint8_t			prefix_set;
+static uint8_t		prefix_set;
 
-static char				msg[MAX_ADDR*MAX_ADDR_LENGTH + SEP_LENGTH + JSON_LENGTH];
-static int32_t			last_byte = 0;
-static char				addr[MAX_ADDR_LENGTH];
+static char	msg[MAX_ADDR * MAX_ADDR_LENGTH + SEP_LENGTH + JSON_LENGTH + 1];
+			/**< Message buffer for get response*/
+static int32_t	last_byte = 0;	
+			/**< last byte sent by the get blockwise transfer*/
 
-static uip_ds6_route_t	*route;
-
-static process_event_t	event_route_add;
-static process_event_t	event_route_rm;
-
-
-PROCESS(border_router_process, "Border Router");
-PROCESS(border_router_coap, "CoAP");
-
+PROCESS(border_router_process, "BR");
+PROCESS(border_router_coap, "BR-CoAP");
 
 AUTOSTART_PROCESSES(&border_router_process, &border_router_coap);
 
+static void get_handler(void *request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void event_handler();
+
+EVENT_RESOURCE(res_routes, "title=\"routes\";", get_handler, NULL, NULL, NULL, event_handler);
+
+static char		addr[MAX_ADDR_LENGTH]; 
+				/**< human-readable IPv6 address buffer */
+static uip_ds6_route_t	*route;	
+				/**< pointer to the route table*/
 
 /*---------------------------------------------------------------------------*/
 void request_prefix(void) {
@@ -73,12 +75,16 @@ void set_prefix_64(uip_ipaddr_t *prefix_64) {
 		printf("created a new RPL dag\n");
 	}
 }
-
 /* -------------------------------------------------------------------------- */
 /* ---------------------------------- CoAP ---------------------------------- */ 
 /* -------------------------------------------------------------------------- */
-
-/* -------------------------------------------------------------------------- */
+/**
+ * @brief	translate an machine readable IPv6 address into an human
+ *		human readable IPv6 addr.
+ *
+ * @param[in]	addr		a struct that use contiki for manage IPv6 addrs.
+ * @param[out]	str_addr	output string
+ */
 static void ipaddr_get(const uip_ipaddr_t *addr, char *str_addr) {
 	uint16_t	a;
 	int		i, f;
@@ -103,6 +109,9 @@ static void ipaddr_get(const uip_ipaddr_t *addr, char *str_addr) {
 }
 
 /* -------------------------------------------------------------------------- */
+/**
+ * @brief	build the JSON message for the Get response
+ */
 void build_message() {
 
 	sprintf(msg, "{'routes':['");
@@ -115,17 +124,13 @@ void build_message() {
 	}
 	strcat(msg, "']}");
 }
-	
-
-
 /*---------------------------------------------------------------------------*/
-static void get_handler(void *request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-static void event_handler();
-
-EVENT_RESOURCE(resource_motes_addr, "title=\"motes_addr\";rt=\"Text\";obs", get_handler, NULL, NULL, NULL, event_handler);
-
-
-/*---------------------------------------------------------------------------*/
+/**
+ * @brief	get body
+ * 
+ * It copies the message builded by buil_message in the response body, manages
+ * coap blockwise transfer as well
+ */
 static void get_handler(void *request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset) {
 	int32_t		msg_length;
 	int32_t		n_write = 0;
@@ -151,56 +156,48 @@ static void get_handler(void *request, void* response, uint8_t *buffer, uint16_t
 		*offset = -1;
 	}
 }
-
-
 /*---------------------------------------------------------------------------*/
+/**
+ * @brief	notify all subscribers with a get response
+ */
 static void event_handler() {
-	REST.notify_subscribers(&resource_motes_addr);
+	REST.notify_subscribers(&res_routes);
 }
-
-
 /* -------------------------------------------------------------------------- */
+/**
+ * @brief	updates the route table and eventually notifies subscribers
+ */
 static void route_callback(int event, uip_ipaddr_t *ipaddr, uip_ipaddr_t *nexthop, int num_routes) {
 
 	if (event == UIP_DS6_NOTIFICATION_ROUTE_ADD) {
-		process_post(&border_router_coap, event_route_add, NULL);
-	
+		// routes added automatically by BR
+		res_routes.trigger();
 	} else if (event == UIP_DS6_NOTIFICATION_ROUTE_RM) {
+		// routes removed manually (BR doesn't remove automatically)
 		route = uip_ds6_route_lookup(ipaddr);
 		uip_ds6_route_rm(route);
-		process_post(&border_router_coap, event_route_rm, NULL);
-
+		res_routes.trigger();
 	}
 }
-
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(border_router_coap, ev, data) {
-	static struct uip_ds6_notification notification;
+PROCESS_THREAD(border_router_coap, ev, data) 
+{
+static struct uip_ds6_notification notification;
 
 	PROCESS_BEGIN();
-
-	event_route_add = process_alloc_event();
-	event_route_rm = process_alloc_event();
-
+	// attach route callback
 	uip_ds6_notification_add(&notification, route_callback);
 
 	PROCESS_PAUSE();
-
+	
 	rest_init_engine();
-
-	rest_activate_resource(&resource_motes_addr, "m");
+	rest_activate_resource(&res_routes, "routes");
 
 	while(1) {
-
 		PROCESS_WAIT_EVENT();
-		if (ev == event_route_add || ev == event_route_rm) {
-			resource_motes_addr.trigger();
-		}
 	}
-
 	PROCESS_END();
 }
-
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(border_router_process, ev, data) {
@@ -234,7 +231,6 @@ PROCESS_THREAD(border_router_process, ev, data) {
 
 
 	NETSTACK_MAC.off(1);
-
 
 	while(1) {
 		PROCESS_YIELD();
