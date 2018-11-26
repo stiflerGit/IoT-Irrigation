@@ -7,3 +7,15 @@ contiki-z1.*
 
 symbols.c
 symbols.h
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Mac
+.DS_Store
+
+# Maven
+log/
+target/
