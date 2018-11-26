@@ -1,4 +1,4 @@
-package it.unipi.iot.in;
+package platform.server;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import java.net.Inet4Address;

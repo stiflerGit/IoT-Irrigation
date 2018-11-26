@@ -1,4 +1,4 @@
-package it.unipi.iot.in;
+package platform.server;
 
 import java.io.IOException;
 // java standards
@@ -8,9 +8,7 @@ import java.util.List;
 // JSON
 import org.json.JSONObject;
 // core
-import it.unipi.iot.core.Mote;
-// om2m
-import platform.core;
+import platform.core.*;
 // web server
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -146,14 +144,15 @@ public class Adn {
 					e.printStackTrace();
 				}
 				String parentCont = "";
-				String[] mnCNTs, tmp;
+				String[] tmp;
+				List<String> mnCNTs;
 				ArrayList<String> motesRNs = new ArrayList<String>();
 				ArrayList<String> newMotes = new ArrayList<String>();
 				ArrayList<String> oldMotes = new ArrayList<String>();
 				// discover the containers on the MN
 				mnCNTs = MCA.discoverResources(Constants.MN_CSE_COAP, "?fu=1&rty=3&lbl=Mote");
 				// Collect Motes Resource names (that are equal to their id)
-				if (mnCNTs == null) {
+				if (mnCNTs == null || mnCNTs.isEmpty()) {
 					continue;
 				}
 				for (String cntRi : mnCNTs) {
@@ -207,14 +206,15 @@ public class Adn {
 
 		private void newMotesUpdateOM2M(List<String> newMotes) {
 			String parentCont = "";
-			String[] mnCNTs, tmp;
+			String[] tmp;
+			List<String> mnCNTs;
 			// for each new mote we have to create a container on the IN
 			for (String newMoteRn : newMotes) {
 				containers.put(newMoteRn,
 						MCA.createContainer(Constants.IN_CSE_URI + "/" + aEcontroller.getRn(), newMoteRn, newMoteRn));
 				// discover all Containers for a sensor
 				mnCNTs = MCA.discoverResources(Constants.MN_CSE_COAP, "?fu=1&rty=3&lbl=Resource-" + newMoteRn);
-				if (mnCNTs == null)
+				if (mnCNTs == null || mnCNTs.isEmpty())
 					break;
 				// create a container for each resource of the mote we want to control
 				for (String cont : mnCNTs) {

@@ -1,4 +1,4 @@
-package it.unipi.iot.in;
+package platform.server;
 
 import java.io.IOException;
 import java.util.List;

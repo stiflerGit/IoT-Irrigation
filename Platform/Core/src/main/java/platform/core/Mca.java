@@ -100,7 +100,7 @@ public final class Mca {
 	/* ------------------------------------------------------------------------------- */
 	/* Get function */
 	/* ------------------------------------------------------------------------------- */
-	private AE getAE(String cse, String rn) {
+	public AE getAE(String cse, String rn) {
 		JSONObject object = null;
 		
 		String response = om2mRequest("GET", 0, cse, rn, "");
@@ -119,7 +119,7 @@ public final class Mca {
 	}
 	
 	
-	private Container getContainer(String cse, String rn) {
+	public Container getContainer(String cse, String rn) {
 		JSONObject object = null;
 		
 		String response = om2mRequest("GET", 0, cse, rn, "");
@@ -135,6 +135,24 @@ public final class Mca {
 			System.exit(-1);
 		}
 		return new Container(object);
+	}
+	
+	public ContentIstance getContentIstance(String cse, String rn) {
+		JSONObject object = null;
+		
+		String response = om2mRequest("GET", 0, cse, rn, "");
+		if (response == null || response.contains("Resource not found")) {
+			System.err.println("MCA: Error in get Container, " + cse + "/" + rn + " not found");
+			System.exit(-1);
+		}
+
+		try {
+			object = new JSONObject(response);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		return new ContentIstance(object);
 	}
 
 		

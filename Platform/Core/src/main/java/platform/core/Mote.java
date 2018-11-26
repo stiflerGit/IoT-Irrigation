@@ -1,220 +1,134 @@
+/**
+ * 
+ */
 package platform.core;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
-//import com.google.gson.Gson;
+import com.google.gson.Gson;
 
 public class Mote {
 
-	public String name;
-	public float lat;
-	public float lng;
-	public int battery;
-	public float temperature;
-	public float humidity;
-	
-	public boolean new_temperature;
-	public boolean new_humidity;
-	public boolean new_battery;
-	public boolean new_position;
+	private String id;
+	private String type;
 
-	public boolean is_new;
-	public Semaphore mutex;
-	public boolean first_time;
-
+	private float latitude;
+	private float longitude;
+	private float temperature;
+	private float humidity;
+	private int battery;
 
 	/**
-	 * Constructor for class Mote
-	 *  
+	 * 
 	 */
-	public Mote(String name) {		
-		this.name = name;
-		this.battery = 0;
-		this.temperature = 0;
-		this.lat = 0;
-		this.lng = 0;
-		this.humidity = 0;
-	
-		this.new_battery = false;
-		this.new_temperature = false;
-		this.new_humidity = false;
-		this.new_position = false;
-	
-		this.is_new = false;
-		this.first_time = true;
-		mutex = new Semaphore(true);
-	}
-
-
-	/* Getter methods */
-
-	public String getName() {
-		return name;
+	public Mote() {
+		// TODO Auto-generated constructor stub
 	}
 	
+	public Mote(String id) {
+		this.id = id;
+	}
+	
+	public String getId() {
+		return id;
+	}
+	
+	public void setId(String id) {
+		this.id = id;
+	}
+	
+	public void setId(JSONObject id) {
+		id.get("id");
+	}
+	
+	public String getType() {
+		return type;
+	}
+	
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public float getLatitude() {
+		return latitude;
+	}
+
+	public void setLatitude(float latitude) {
+		this.latitude = latitude;
+	}
+
+	public float getLongitude() {
+		return longitude;
+	}
+
+	public void setLongitude(float longitude) {
+		this.longitude = longitude;
+	}
 
 	public float getTemperature() {
 		return temperature;
 	}
-	
 
+	public void setTemperature(float temperature) {
+		this.temperature = temperature;
+	}
+	
 	public float getHumidity() {
 		return humidity;
 	}
-	
 
-	public JSONObject getPosition() {
-		JSONObject object = new JSONObject();
-		object.put("lat", lat);
-		object.put("lng", lng);
-		
-		return object;
+	public void setHumidity(float humidity) {
+		this.humidity = humidity;
 	}
-	
+
 	public int getBattery() {
 		return battery;
 	}
 
-
-	public JSONObject getMoteResource(String res) {
-		JSONObject object = new JSONObject();
-	
-		//object.put("name", name);
-		if (res.equals("temperature")) {
-			object.put("val", temperature);
-		}
-		if (res.equals("humidity")) {
-			object.put("val", humidity);
-		}
-		if (res.equals("battery")) {
-			object.put("val", battery);
-		}
-		if (res.equals("position")) {
-			JSONObject root = new JSONObject();
-			root.put("lat", lat);
-			root.put("lng", lng);
-			object.put("val", root);
-			
-		}
-
-		return object;
-	}
-		
-	/* Setter methods */
-
-	public void setName(String name) {
-		this.name = name;
-	}
-		
-		
-	public void setTemperature(float temperature, boolean update) {
-		this.temperature = temperature;
-		if (update) {
-			this.new_temperature = true;
-			this.is_new = true;
-		}
-	}
-	
-	
-	public void setHumidity(float humidity, boolean update) {
-		this.humidity = humidity;
-		if (update) {
-			this.new_humidity = true;
-			this.is_new = true;
-		}
-	}
-
-
-	public void setPosition(JSONObject object, boolean update) {
-		float lat = (float) object.getDouble("lat");
-		float lng = (float) object.getDouble("lng");
-		this.lat = lat;
-		this.lng = lng;
-		if (update) {
-			this.new_position = true;
-			this.is_new = true;
-		}
-	}
-
-
-	public void setBattery(int battery, boolean update) {
+	public void setBattery(int battery) {
 		this.battery = battery;
-		if (update) {
-			this.new_battery = true;
-			this.is_new = true;
-		}
-	}
-
-	
-	public void setMoteResource(String content, String res, boolean update) {//, boolean first_time) {
-
-		JSONObject object = new JSONObject(content);
-		
-		if (res.equals("type")) {
-			setName("Mote_" + object.getInt("id") + "_" + object.getString("type"));
-		} else if (res.equals("battery")) {
-			setBattery(object.getInt("battery"), update);
-		} else if (res.equals("gps")) {
-			setPosition(object, update);
-		} else if (res.equals("temperature")) {
-			setTemperature((float) object.getDouble("temperature"), update);
-		} else if (res.equals("humidity")) {
-			setHumidity((float) object.getDouble("humidity"), update);
-		}
 	}
 	
-	/*
-	public String toJSON() {
-		this.new_battery = false;
-		this.new_position = false;
-		this.new_temperature = false;
-		this.new_humidity = false;
-		this.is_new = false;
+	public String toJson() {
 		Gson gson = new Gson();
-		String json = gson.toJson(this);
-		return json;
+		return gson.toJson(this);
 	}
 	
-
-	public Mote toMote(String json) {
-		Gson gson = new Gson();
-		Mote deserialized = gson.fromJson(json, Mote.class);
-		return deserialized;
-	
-	}
-	*/
-	
-
-	/*
-	public JSONObject getUpdateContent(String res) {
-		JSONObject object = new JSONObject();
-	
-		object.put("name", name);
-		if (new_temperature) {
-			object.put("temperature", temperature);
-			new_temperature = false;
-		}
-		if (new_humidity) {
-			object.put("humidity", humidity);
-			new_temperature = false;
-		}
-		if (new_battery) {	
-			object.put("battery", battery);
-			new_battery = false;
-		}
-		if (new_position) {
-			object.put("lat", lat);
-			object.put("lng", lng);
-			new_position = false;
-			
-		}
+	public static void main(String[] Args) {
+		Mote sens = new Mote();
 		
-		is_new = false;
-		return object;
+		sens.setBattery(9);
+		sens.setHumidity(90);
+		sens.setId("1990");
+		
+		System.out.println(sens.toJson());
 	}
-	*/
-	
-	
-	
 
+/*	public void setMoteResource(String response, String res, boolean b, boolean c) {
+		// TODO Auto-generated method stub
+		
+	}*/
+	
+	public void setFieldFromJson(JSONObject fields) {
+		try {
+			if(fields.has("id"))
+				setId((String)fields.get("id"));
+			if (fields.has("type"))
+				setType((String)fields.get("type"));
+			if (fields.has("lat"))
+				setLatitude(Float.parseFloat(fields.get("lat").toString()));
+			if(fields.has("lng"))
+				setLatitude(Float.parseFloat(fields.get("lng").toString()));
+			if(fields.has("temperature"))
+				setTemperature(Float.parseFloat(fields.get("temperature").toString()));
+			if(fields.has("humidity"))
+				setHumidity(Float.parseFloat(fields.get("humidity").toString()));
+			if(fields.has("battery"))
+				setBattery(Integer.parseInt(fields.get("battery").toString()));
+		} catch(JSONException e) {
+			System.err.println(e.getMessage());
+		}
+	}
+	
 }
