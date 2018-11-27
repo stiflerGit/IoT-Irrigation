@@ -96,8 +96,8 @@ angular.module('Application', ['ngWebSocket'])
 
         $scope.motes[i].updated.tipo = false;
         
-        $scope.currentMote = null;
-        $scope.hideManagement = true;
+        // $scope.currentMote = null;
+        // $scope.hideManagement = true;
     }
 
 
@@ -115,8 +115,8 @@ angular.module('Application', ['ngWebSocket'])
 
         $scope.motes[i].updated.irrigation = false;
         
-        $scope.currentMote = null;
-        $scope.hideManagement = true;
+        // $scope.currentMote = null;
+        // $scope.hideManagement = true;
     }
 
 
@@ -137,8 +137,8 @@ angular.module('Application', ['ngWebSocket'])
         $scope.motes[i].updated.irrigation = false;
         $scope.motes[i].updated.tipo = false;
 
-        $scope.currentMote = null;
-        $scope.hideManagement = true;
+        // $scope.currentMote = null;
+        // $scope.hideManagement = true;
 
     }
 
