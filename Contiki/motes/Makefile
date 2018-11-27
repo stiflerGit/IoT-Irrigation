@@ -5,11 +5,11 @@ all: coap-server
 
 SMALL=1
 
-CONTIKI = /home/universita/git/contiki/
+CONTIKI = ../../../git/contiki/
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 REST_RESOURCES_DIR = ./resources
-REST_RESOURCES_FILES = type.c battery.c gps.c temperature.c humidity.c
+REST_RESOURCES_FILES = name.c battery.c gps.c temperature.c humidity.c type.c irrigation.c
 
 PROJECTDIRS += $(REST_RESOURCES_DIR)
 PROJECT_SOURCEFILES += $(REST_RESOURCES_FILES)

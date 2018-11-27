@@ -179,7 +179,7 @@ static void route_callback(int event, uip_ipaddr_t *ipaddr, uip_ipaddr_t *nextho
 		route_event = event;
 		evt_routes.trigger();
 	}
-	route_event = -1;
+	route_event = 0;
 }
 
 

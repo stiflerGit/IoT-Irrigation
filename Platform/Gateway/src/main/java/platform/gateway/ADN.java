@@ -23,14 +23,14 @@ import platform.core.*;
 public class ADN {
 
 	private static Mca MCA = Mca.getInstance();
+	private static AE AE_Monitor;
 
-	public static AE AE_Monitor;
-	public static ArrayList<String> mote_uri = new ArrayList<String>();
+	private static ArrayList<String> mote_uri = new ArrayList<String>();
 	private static ArrayList<String> mote_addr = new ArrayList<String>();
 
-	public static ArrayList<String> subscriptions = new ArrayList<String>();
 	private static CopyOnWriteArrayList<Container> containers = new CopyOnWriteArrayList<Container>();
-	
+	private static CopyOnWriteArrayList<String> subscriptions = new CopyOnWriteArrayList<String>();
+
 	private static CopyOnWriteArrayList<ObserveThread> observe_threads = new CopyOnWriteArrayList<ObserveThread>();
 	private static DiscoverThread discover_thread;
 	private static CoapMonitorThread monitor_thread;
@@ -129,40 +129,12 @@ public class ADN {
 		if (discover_thread.getState() == Thread.State.NEW)
 			discover_thread.start();
 		
-		monitor_thread = new CoapMonitorThread("CoapMonitor", mote_addr, mote_uri);
+		monitor_thread = new CoapMonitorThread("CoapMonitorGateway");//, mote_addr, mote_uri);
 		if (monitor_thread.getState() == Thread.State.NEW)
 			monitor_thread.start();
 
 	}
 			
-
-
-
-	/**
-	 * @brief	Modify mote.
-	 * - add or remove mote according to message receive from observing thread of border router.
-	 * 
-	 * @param[in]	message message received from border router to notify added or removed mote.
-	 * 
-	 */
-	public static void modifyMote(String content) {
-		JSONObject object = null;
-		try {
-			object = new JSONObject(content);
-		} catch (JSONException e) {
-			e.printStackTrace();
-			System.out.println(content);
-		}
-		String routes;
-		if (object.has("add")) {
-			routes = object.getString("add");
-			addMote(routes);
-		} else if (object.has("rm")) {
-			routes = object.getString("rm");
-			removeMote(routes);
-		}
-	}
-
 
 	/**
 	 * @brief	Add mote.
@@ -196,9 +168,9 @@ public class ADN {
 			if (resources != null) {
 
 				for (WebLink res : resources) {
-					String uri_res = res.getURI().replace("/", "");
+					String uri_res = res.getURI();		// uri_res = /sensor/name or /actuator/type
 
-					if (uri_res.equalsIgnoreCase("type")) {
+					if (uri_res.contains("name")) {
 						try {
 							uri = new URI("coap://[" + addr + "]:5683/" + uri_res);
 						} catch (URISyntaxException e) {
@@ -211,11 +183,9 @@ public class ADN {
 
 						if (response != null) {
 							JSONObject object = new JSONObject(response.getResponseText());
-							int id = object.getInt("id");
-							String type = object.getString("type");
+							String name = object.getString("name");
 
-							System.out.println("Found Mote: " + id + ", " + type);
-							String name = "Mote_" + id + "_" + type;
+							System.out.println("Found Mote: " + name);
 
 							mote_uri.add(name);
 
@@ -225,7 +195,7 @@ public class ADN {
 							String container_cse = ae_cse + "/" + containers.get(containers.size() - 1).getRn();
 							registerResources(addr, resources, container_cse);
 
-							System.out.println("Registered resources for mote: " + id + ", " + type);
+							System.out.println("Registered resources for mote: " + name);
 						} else {
 							System.out.println("No response received" + " from " + "coap://[" + addr + "]" + ":5683/" + uri_res);
 						}
@@ -281,9 +251,8 @@ public class ADN {
 					subscriptions.remove(subscriptions.indexOf(subs));
 			}
 
-			System.out.println("Removed Mote: " + uri.split("_")[1] + ", " + uri.split("_")[2]);
+			System.out.println("Removed Mote: " + uri);
 
-			
 		}
 	}
 
@@ -301,83 +270,81 @@ public class ADN {
 		
 		for (WebLink res : resources) {
 			String name = mote_uri.get(mote_addr.indexOf(addr));
-			String uri_res = res.getURI().replace("/", "");
+			String uri_res = res.getURI().replace("/", "_").substring(1);
 
-			if (!uri_res.equalsIgnoreCase(".well-knowncore") && !uri_res.contains("type")) {
-				name = name + "-Resource_" + uri_res;
-				containers.add(MCA.createContainer(container_cse, name, "Resource-" + mote_uri.get(mote_addr.indexOf(addr))));
+			// Observable resource (sensor)
+			//if (!uri_res.contains(".well-known_core") && !uri_res.contains("name") && !uri_res.contains("actuator")) {
+			if (uri_res.contains("sensor") && !uri_res.contains("name")) {
+				name = name + "-" + uri_res;
+				containers.add(MCA.createContainer(container_cse, name, uri_res.split("_")[0] + "-" + mote_uri.get(mote_addr.indexOf(addr))));
 
-				//if (!uri_res.equalsIgnoreCase("type")) {
-					observe_threads.add(new ObserveThread("coap://[" + addr + "]:5683/" + uri_res, container_cse + "/" + name));
-					Runtime.getRuntime().addShutdownHook(new Thread() {
-						public void run() {
-							observe_threads.get(observe_threads.size() - 1).stopObserve();
-						}
-					});
-					if ((observe_threads.get(observe_threads.size() - 1)).getState() == Thread.State.NEW)
-						observe_threads.get(observe_threads.size() - 1).start();
-				//}
+
+				observe_threads.add(new ObserveThread("coap://[" + addr + "]:5683/" + uri_res.replace("_", "/"), container_cse + "/" + name));
+				Runtime.getRuntime().addShutdownHook(new Thread() {
+					public void run() {
+						observe_threads.get(observe_threads.size() - 1).stopObserve();
+					}
+				});
+				if ((observe_threads.get(observe_threads.size() - 1)).getState() == Thread.State.NEW)
+					observe_threads.get(observe_threads.size() - 1).start();
+			// Simple resource that allow the post method to change the value (actuator)
+			} else if (uri_res.contains("actuator")) {
+				name = name + "-" + uri_res;
+				System.out.println(container_cse +"/" + name);
+				containers.add(MCA.createContainer(container_cse, name, uri_res.split("_")[0] + "-" + mote_uri.get(mote_addr.indexOf(addr))));
+				
+				URI uri = null;
+				try {
+					uri = new URI("coap://[" + addr +"]:5683/" + uri_res.replace("_", "/"));
+				} catch (URISyntaxException e) {
+					System.err.println("Invalid URI: " + e.getMessage());
+					System.exit(-1);
+				}
+				CoapClient client = new CoapClient(uri);
+				CoapResponse response = client.get();
+				if (response != null) {
+					MCA.createContentInstance(container_cse + "/" + name, response.getResponseText());
+				} else {
+					System.out.println("No response received" + " from " + "coap://[" + addr + "]" + ":5683/" + uri_res.replace("_", "/"));
+				}
 			}
 		}
 	}
 
 
 	/**
-	 * @brief When a mote uri change, in consequence of fact that
-	 * CoapMonitor receive a notifications from IN and a mote type 
-	 * is changed, being mote uri equals mote name (obtained by
-	 * make a GET request to resource type) we change also the
-	 * mote uri of the containers and the uri in the observing
-	 * thread where the thread receive notifications from observing.
+	 * @brief	Modify mote.
+	 * - add or remove mote according to message receive from observing thread of border router.
 	 * 
-	 * @param[in] uri_mote old uri of the mote that we want to change
-	 * @param[in] message message received from border router to notify added or removed mote.
+	 * @param[in]	message message received from border router to notify added or removed mote.
 	 * 
 	 */
-	public static void updateMote(String old_uri_mote, JSONObject new_content) {
-
-		int id = new_content.getInt("id");
-		String type = new_content.getString("type");
-		String new_uri_mote = "Mote_" + id + "_" + type;
-
-		if (mote_uri.contains(old_uri_mote)) {
-			int i = mote_uri.indexOf(old_uri_mote);
-			mote_uri.set(i, new_uri_mote);
-
-			String ae_cse = Constants.MN_CSE_URI + "/" + AE_Monitor.getRn();
-	
-			for (ObserveThread ot : observe_threads) {
-				if (ot.container_cse.contains(old_uri_mote)) {
-					String uri_res = ot.container_cse.substring(ot.container_cse.lastIndexOf("/") + 1);
-					ot.container_cse = ae_cse + "/" + new_uri_mote + "/" + uri_res;
-				}
-			}
-
-			//String response = MCA.updateContainer(ae_cse, old_uri_mote, new_uri_mote);
-			for (Container cont : containers) {
-				if (cont.getRn().contains(old_uri_mote)) {
-					String response = MCA.updateContainer(ae_cse, cont.getRn(), cont.getRn().replace(old_uri_mote, new_uri_mote));
-					i = containers.indexOf(cont);
-					Container new_container = MCA.setContainer(containers.get(i), response);
-					containers.set(i, new_container);
-					//break;
-				}
-			}
-			//Container new_container = MCA.setContainer(containers.get(i), response);
-			//containers.set(i, new_container);
-			
-			for (String subs : subscriptions) {
-				if (subs.contains(old_uri_mote))
-					i = subscriptions.indexOf(subs);
-					String uri_res = subs.substring(subs.lastIndexOf("-") + 1);
-					subscriptions.set(i, new_uri_mote + "-" + uri_res);
-					MCA.updateSubscription(Constants.IN_CSE_COAP + "/" + "AE_Controller" + "/" + old_uri_mote + "/" + uri_res, subs,
-						 new_uri_mote + "-" + uri_res, "coap://127.0.0.1:" + Constants.MN_COAP_PORT + "/CoapMonitor");
-			}
-			System.out.println("Updated Mote: " + old_uri_mote.split("_")[1] + ", " + old_uri_mote.split("_")[2] + " ===> " + id + ", " + type);
+	public static void modifyMote(String content) {
+		JSONObject object = null;
+		try {
+			object = new JSONObject(content);
+		} catch (JSONException e) {
+			e.printStackTrace();
+			System.out.println(content);
+		}
+		String routes;
+		if (object.has("add")) {
+			routes = object.getString("add");
+			addMote(routes);
+		} else if (object.has("rm")) {
+			routes = object.getString("rm");
+			removeMote(routes);
 		}
 	}
+
+
+	public static Mca getMca() {
+		return MCA;
+	}
 	
+	public static AE getAE() {
+		return AE_Monitor;
+	}
 	
 	public static ArrayList<String> getMoteUri() {
 		return mote_uri;
@@ -386,55 +353,15 @@ public class ADN {
 	public static ArrayList<String> getMoteAddr() {
 		return mote_addr;
 	}
-	/**
-	 * @brief Discover all the useful resources on the IN.
-	 * 
-	 * @param in_cse URI of the IN
-	 * @return List of the discovered resources
-	 */
-	/*
-	private static void discoverIN(String in_cse) {
-		
-		String[] ae_in = null;
-		String[] containers_in = null;
-		String[] resource_in = null;
-		
-		// Search the "AE_Controller" AE on the IN
-		ae_in = MCA.discoverResources(in_cse, "?fu=1&rty=2&lbl=AE_Controller");
-		
-		if (ae_in == null) 
-			return;
-
-		for (String uri : mote_uri) {
-			containers_in = MCA.discoverResources(in_cse + "/" + ae_in, "?fu=1&rty=3&lbl=" + uri);
-
-			if (containers_in == null)
-				return;
-
-			for (String cont_in : containers_in) {
-				resource_in = MCA.discoverResources(in_cse + "/" + ae_in + "/" + cont_in, "?fu=1&rty=3");
-
-				if (resource_in == null)
-					return;
-
-				for (String res_in : resource_in) {
-
-					if (res_in.contains("type")) {
-						String cse = in_cse + "/" + ae_in + "/" + cont_in + "/" + res_in;
-						MCA.createSubscription(cse , "Subscription-" + cont_in + "-" + res_in, "coap://127.0.0.1:5686/CoapMonitor");
-						subscriptions.add("Subscription-" + cont_in + "-" + res_in);
-						System.out.println("Subscribed to: " + cse);
-					}
-						
-				}
-			}
-		}
-		
-	}
-	*/
 	
-
-
+	public static CopyOnWriteArrayList<Container> getContainers() {
+		return containers;
+	}
+	
+	public static CopyOnWriteArrayList<String> getSubscriptions() {
+		return subscriptions;
+	}
+	
 
 	/**
 	 * @brief MAIN of the Middle Node Adn.

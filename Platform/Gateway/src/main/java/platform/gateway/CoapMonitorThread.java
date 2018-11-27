@@ -51,21 +51,19 @@ public class CoapMonitorThread extends Thread {
 		
 
 		class Monitor extends CoapResource {
+			
+			private String getUriResource(String resource) {
+				return resource.replace("_", "/");
+			}
 
 			private String get_message(JSONObject content, String uri_res) {
 				
 				String message = null;
 				
-				if (uri_res.equalsIgnoreCase("type")) {
+				if (uri_res.equalsIgnoreCase("actuator_type")) {
 					message = "type=" + content.getString("type");
-				} else if (uri_res.equalsIgnoreCase("battery")) {
-					message = "value=" + content.getInt("battery");		
-				} else if (uri_res.equalsIgnoreCase("temperature")) {
-					message = "value=" + content.getDouble("temperature");
-				} else if (uri_res.equalsIgnoreCase("humidity")) {
-					message = "value=" + content.getDouble("humidity");
-				} else if (uri_res.equalsIgnoreCase("gsps")) {
-					message = "lat=" + content.getDouble("lat") + "," +  "lng=" + content.getDouble("lng");
+				} else if (uri_res.equalsIgnoreCase("actuator_irrigation")) {
+					message = "irrigation=" + content.getInt("irrigation");
 				}
 				System.out.println("New mote value: " + message);
 				return message;
@@ -73,21 +71,24 @@ public class CoapMonitorThread extends Thread {
 
 			private void mote_post(String mote, String uri_res, String uri_mote, String reply) {
 				URI uri = null;
-
+				String uri_resource = getUriResource(uri_res);
+				
 				try {
-					uri = new URI("coap://[" + mote + "]:5683/" + uri_res);
+					uri = new URI("coap://[" + mote + "]:5683/" + uri_resource);
 				} catch (URISyntaxException e) {
 					System.err.println("Invalid URI: " + e.getMessage());
 					System.exit(-1);
 				}
-
+				System.out.println("MOTE_POST_START: " + uri);
 				CoapClient client = new CoapClient(uri);
 				JSONObject root = new JSONObject(reply);
 				String message = get_message(root, uri_res);
 				CoapResponse response = client.post(message, MediaTypeRegistry.TEXT_PLAIN);
+				ADN.getMca().createContentInstance(Constants.MN_CSE_URI + "/" + ADN.getAE().getRn() + "/"
+							+ uri_mote + "/" + uri_mote + "-" + uri_res, 
+							"{'" + uri_res.substring(uri_res.lastIndexOf("_") + 1, uri_res.length()) + ":'" + 
+							message.substring(message.lastIndexOf("=") + 1, message.length()) + "'}");
 				System.out.println(response.getResponseText());
-				if (uri_res.equalsIgnoreCase("type"))
-					ADN.updateMote(uri_mote, root);
 			}
 			
 			public Monitor() {
@@ -100,40 +101,53 @@ public class CoapMonitorThread extends Thread {
 				exchange.respond(ResponseCode.CREATED);
 				byte[] content = exchange.getRequestPayload();
 				String contentStr = new String(content);
-
+				System.out.println("handlePOST: " + contentStr);
 				try {
 					JSONObject root = new JSONObject(contentStr);
 					JSONObject m2msgn = root.getJSONObject("m2m:sgn");
-					JSONObject nev = m2msgn.getJSONObject("nev");
-					JSONObject rep = nev.getJSONObject("rep");
-					String reply = rep.getString("con");
 
-					String[] uri = m2msgn.getString("sur").split("/");
+					if (m2msgn.has("m2m:nev")) {
+						JSONObject nev = m2msgn.getJSONObject("m2m:nev");
+						JSONObject rep = nev.getJSONObject("m2m:rep");
+						JSONObject m2mcin = rep.getJSONObject("m2m:cin");
+						
+						String reply = m2mcin.getString("con");
+	
+						JSONObject m2mcont = new JSONObject(ADN.getMca().om2mRequest("GET", 0, Constants.IN_CSE_COAP, m2mcin.getString("pi").substring(1), ""));
+						
+						m2mcont = m2mcont.getJSONObject("m2m:cnt");
+						System.out.println(m2mcont);
+						String[] uri = m2mcont.getString("rn").split("-");
+												
+						
+						String uri_mote = null;
+						for (String string : uri) {
+							if (string.contains("Mote")) {
+								uri_mote = string;
+								break;
+							}
+						}
+	
+						String addr = null;
+						ArrayList<String> mote_uri = ADN.getMoteUri();
+						ArrayList<String> mote_addr = ADN.getMoteAddr();
+						for (String string : mote_uri) {
+							if (uri_mote.equals(mote_uri.get(mote_uri.indexOf(string))))
+								addr = mote_addr.get(mote_uri.indexOf(string));
+						}
+						
+						String uri_res = null;
+						for (String string : uri) {
+							if (string.contains("actuator"))
+								uri_res = string;
+						}
 
-					String uri_mote = null;
-					for (String string : uri) {
-						if (string.contains("Mote"))
-							uri_mote = string;
+						System.out.println("New content: " + reply);
+						mote_post(addr, uri_res, uri_mote, reply);
 					}
-
-					String addr = null;
-					ArrayList<String> mote_uri = ADN.getMoteUri();
-					ArrayList<String> mote_addr = ADN.getMoteAddr();
-					for (String string : mote_uri) {
-						if (uri_mote.equals(mote_uri.get(mote_uri.indexOf(string))))
-							addr = mote_addr.get(mote_uri.indexOf(string));
-					}
-					
-					String uri_res = null;
-					for (String string : uri) {
-						if (string.contains("Resource"))
-							uri_res = string;
-					}
-
-					System.out.println("New content: " + reply);
-					mote_post(addr, uri_res, uri_mote, reply);
-
-				} catch (JSONException e) {}
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
 			}
 
 			public void handleGET(CoapExchange exchange) {
@@ -145,7 +159,7 @@ public class CoapMonitorThread extends Thread {
 	}
 	
 	
-	public CoapMonitorThread(String name, ArrayList<String>mote_addr, ArrayList<String>mote_uri) {
+	public CoapMonitorThread(String name) {
 		this.name = name;
 	}
 	
@@ -153,7 +167,7 @@ public class CoapMonitorThread extends Thread {
 	public void run() {
 		CoapMonitor server;
 		try {
-			server = new CoapMonitor(this.name);//, this.mote_addr, this.mote_uri);
+			server = new CoapMonitor(this.name);
 			server.addEndpoints();
 			server.start();
 		} catch (SocketException e) {

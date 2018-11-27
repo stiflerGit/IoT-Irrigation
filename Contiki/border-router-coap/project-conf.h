@@ -7,7 +7,7 @@
 #endif
 
 #ifndef RPL_CONF_DEFAULT_LIFETIME
-#define RPL_CONF_DEFAULT_LIFETIME		3
+#define RPL_CONF_DEFAULT_LIFETIME		2
 #endif
 
 #ifndef NETSTACK_CONF_RDC
@@ -62,17 +62,3 @@
 
 #endif /* PROJECT_ROUTER_CONF_H_ */
 
-/*
-#ifndef random
-#define random(x) (double)rand() / (double)((unsigned)x + 1)
-#ifndef randomize
-#define randomize srand(17)//(unsigned)time(NULL))
-
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW			60
-#endif
-
-#ifndef RPL_CONF_WITH_DAO_ACK
-#define RPL_CONF_WITH_DAO_ACK			0
-#endif
-*/

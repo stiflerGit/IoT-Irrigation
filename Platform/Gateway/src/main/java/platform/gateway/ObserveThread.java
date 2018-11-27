@@ -16,6 +16,7 @@ public class ObserveThread extends Thread {
 	private Mca mca;
 	private Semaphore semaphore;
 	private boolean stop;
+	private String last_content;
 	
 	private CoapClient client;
 	private ObserveHandler handler;
@@ -51,7 +52,9 @@ public class ObserveThread extends Thread {
 		
 		@Override
 		public void onError() {
+			this.content = "";
 			System.err.println("Unable to receive new content from " + this.uri);
+			this.semaphore.doNotify();
 		}
 
 	}
@@ -68,9 +71,11 @@ public class ObserveThread extends Thread {
 		this.mca = Mca.getInstance();
 		this.semaphore = new Semaphore(false);
 		this.stop = false;
+		this.last_content = "";
 
 		this.client = new CoapClient(uri);
 		this.handler = new ObserveHandler(semaphore, uri.toString());
+		System.out.println(this.container_cse);
 	}
 
 	
@@ -87,10 +92,13 @@ public class ObserveThread extends Thread {
 			this.semaphore.doWait();
 			String content = handler.getContent();
 
-			if (this.container_cse.equalsIgnoreCase("BorderRouter"))
-				ADN.modifyMote(content);
-			else
-				this.mca.createContentInstance(this.container_cse, content);
+			if (!content.equals("") && !content.equals(last_content)) {
+				if (this.container_cse.equalsIgnoreCase("BorderRouter"))
+					ADN.modifyMote(content);
+				else
+					this.mca.createContentInstance(this.container_cse, content);
+				last_content = content;
+			}
 		}
 	}
 

@@ -10,12 +10,14 @@
 #include "dev/serial-line.h"
 #include "dev/uart0.h"
 
+extern resource_t resource_name;
 extern resource_t resource_battery;
 extern resource_t resource_gps;
-extern resource_t resource_type;
 extern resource_t resource_temperature;
 extern resource_t resource_humidity;
 
+extern resource_t resource_irrigation;
+extern resource_t resource_type;
 
 // Used to receive serial data (position)
 extern void receive_serial(char *data);
@@ -42,14 +44,16 @@ PROCESS_THREAD(coap_server, ev, data) {
 
 	rest_init_engine();
 
-	rest_activate_resource(&resource_gps, "gps");
-	rest_activate_resource(&resource_battery, "battery");
-	rest_activate_resource(&resource_type, "type");
-	rest_activate_resource(&resource_temperature, "temperature");
-	rest_activate_resource(&resource_humidity, "humidity");
+	rest_activate_resource(&resource_name, "sensor/name");
+	rest_activate_resource(&resource_gps, "sensor/gps");
+	rest_activate_resource(&resource_battery, "sensor/battery");
+	rest_activate_resource(&resource_temperature, "sensor/temperature");
+	rest_activate_resource(&resource_humidity, "sensor/humidity");
+	rest_activate_resource(&resource_type, "actuator/type");
+	rest_activate_resource(&resource_irrigation, "actuator/irrigation");
 
-	etimer_set(&gps_timer, CLOCK_SECOND*2500);
-	etimer_set(&battery_timer, CLOCK_SECOND*2000);
+	etimer_set(&gps_timer, CLOCK_SECOND*30);
+	etimer_set(&battery_timer, CLOCK_SECOND*25);
 
 
 	while(1) {

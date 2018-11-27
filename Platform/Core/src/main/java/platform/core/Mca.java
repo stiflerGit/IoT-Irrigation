@@ -44,16 +44,14 @@ public final class Mca {
 		} else if (request_type.equalsIgnoreCase("POST")) {
 			request = Request.newPost();
 			request.getOptions().addOption(new Option(267, resource_type));
-		} else if (request_type.equalsIgnoreCase("PUT")) {
-			request = Request.newPut();
-			request.getOptions().addOption(new Option(267, resource_type));
 		}
+
 
 		request.getOptions().addOption(new Option(256, "admin:admin"));
 		request.getOptions().setContentFormat(MediaTypeRegistry.APPLICATION_JSON);
 		request.getOptions().setAccept(MediaTypeRegistry.APPLICATION_JSON);
 
-		if (request_type.equalsIgnoreCase("POST") || request_type.equalsIgnoreCase("PUT")) {
+		if (request_type.equalsIgnoreCase("POST")) {
 
 			JSONObject content = new JSONObject();
 			JSONObject root = new JSONObject();
@@ -82,9 +80,9 @@ public final class Mca {
 			String body = root.toString();
 			request.setPayload(body);
 		}
-
+		
 		CoapResponse responseBody = client.advanced(request);
-
+				
 		if (responseBody == null) {
 			System.err.println("MCA: Error in om2mRequest():" + request_type + ", " + resource_type + ", " + "no response from " + cse);
 			System.exit(-1);
@@ -100,7 +98,7 @@ public final class Mca {
 	/* ------------------------------------------------------------------------------- */
 	/* Get function */
 	/* ------------------------------------------------------------------------------- */
-	public AE getAE(String cse, String rn) {
+	private AE getAE(String cse, String rn) {
 		JSONObject object = null;
 		
 		String response = om2mRequest("GET", 0, cse, rn, "");
@@ -119,7 +117,7 @@ public final class Mca {
 	}
 	
 	
-	public Container getContainer(String cse, String rn) {
+	private Container getContainer(String cse, String rn) {
 		JSONObject object = null;
 		
 		String response = om2mRequest("GET", 0, cse, rn, "");
@@ -135,24 +133,6 @@ public final class Mca {
 			System.exit(-1);
 		}
 		return new Container(object);
-	}
-	
-	public ContentIstance getContentIstance(String cse, String rn) {
-		JSONObject object = null;
-		
-		String response = om2mRequest("GET", 0, cse, rn, "");
-		if (response == null || response.contains("Resource not found")) {
-			System.err.println("MCA: Error in get Container, " + cse + "/" + rn + " not found");
-			System.exit(-1);
-		}
-
-		try {
-			object = new JSONObject(response);
-		} catch (JSONException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		}
-		return new ContentIstance(object);
 	}
 
 		
@@ -220,45 +200,6 @@ public final class Mca {
 	/* ------------------------------------------------------------------------------- */
 	public void deleteContainer(String cse, String rn) {
 		om2mRequest("DELETE", 0, cse + "/" + rn, "", "");
-	}
-
-	
-	/* ------------------------------------------------------------------------------- */
-	/* Update function */
-	/* ------------------------------------------------------------------------------- */
-	public String updateContainer(String cse, String old_rn, String new_rn) {
-		return om2mRequest("PUT", 3, cse + "/" + old_rn, new_rn, new_rn);
-	}
-
-	
-	public Container setContainer(Container container, String response) {
-		JSONObject object = null;
-		try {
-			object = new JSONObject(response);
-		} catch (JSONException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		}
-		//container.setRn((String) new_rn);
-		//container.setLbl((String) new_rn);
-		object = (JSONObject) object.get("m2m:cnt");
-		container.setRn((String) object.get("rn"));
-		container.setTy((Integer) object.get("ty"));
-		container.setRi((String) object.get("ri"));
-		container.setPi((String) object.get("pi"));
-		container.setCt((String) object.get("ct"));
-		container.setLt((String) object.get("lt"));
-		container.setSt((Integer) object.get("st"));
-		container.setOl((String) object.get("ol"));
-		container.setLa((String) object.get("la"));
-		container.setLbl((String) object.get("lbl"));
-
-		return container;
-	}
-
-	
-	public void updateSubscription(String cse, String old_rn, String new_rn, String notificationUrl) {
-		om2mRequest("PUT", 23, cse + "/" + old_rn, new_rn, notificationUrl);
 	}
 
 

@@ -1,125 +1,142 @@
 package platform.server;
 
-import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
 import org.eclipse.californium.core.CoapResource;
+
 import org.eclipse.californium.core.CoapServer;
+import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.EndpointManager;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
-import org.eclipse.jetty.util.thread.ThreadPool;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-import platform.core.*;
+import org.json.JSONObject;
+import org.json.JSONException;
+
+import platform.core.Constants;
+
 
 public class CoapMonitorThread extends Thread {
 
-	private int coapPort;
-	public String name;
-	public HashMap<String, Mote> motes;
+	private String name;
 
-	public CoapMonitorThread(String name, int port, HashMap<String, Mote> motes) {
-		this.name = name;
-		this.coapPort = port;
-		this.motes = motes;
-	}
-
-	public void run() {
-		CoapMonitor server;
-		try {
-			server = new CoapMonitor(this.name, coapPort, motes);
-			server.addEndpoints();
-			server.start();
-		} catch (SocketException e) {
-			System.err.println(e.getMessage());
-			e.printStackTrace();
-			System.exit(-1);
-		}
-	}
 
 	public class CoapMonitor extends CoapServer {
 
-		private int coapPort;
-		public String name;
-		public HashMap<String, Mote> motes;
+		private String name;
+
 
 		void addEndpoints() {
 			for (InetAddress addr : EndpointManager.getEndpointManager().getNetworkInterfaces()) {
 				if (((addr instanceof Inet4Address)) || (addr.isLoopbackAddress())) {
-					InetSocketAddress bindToAddress = new InetSocketAddress(addr, coapPort);
+					InetSocketAddress bindToAddress = new InetSocketAddress(addr, Constants.IN_COAP_PORT);
 					addEndpoint(new CoapEndpoint(bindToAddress));
 				}
 			}
 		}
 
-		public CoapMonitor(String name, int port, HashMap<String, Mote> motes) throws SocketException {
+
+		public CoapMonitor(String name) throws SocketException {
 			this.name = name;
-			this.motes = motes;
-			this.coapPort = port;
 			add(new Resource[] { new Monitor() });
 		}
 
-		public void start() {
-			addEndpoints();
-			super.start();
-		}
-
 		class Monitor extends CoapResource {
-
+		
 			public Monitor() {
 				super(name);
 				getAttributes().setTitle(name);
 				setObservable(true);
 			}
 
-			// this function is executed when there is a subscription response
 			public void handlePOST(CoapExchange exchange) {
-				int i = 0;
-
 				exchange.respond(ResponseCode.CREATED);
 				byte[] content = exchange.getRequestPayload();
 				String contentStr = new String(content);
-
+				System.out.println("handlePOST: " + contentStr);
 				try {
 					JSONObject root = new JSONObject(contentStr);
 					JSONObject m2msgn = root.getJSONObject("m2m:sgn");
-					JSONObject nev = m2msgn.getJSONObject("m2m:nev");
-					JSONObject rep = nev.getJSONObject("m2m:rep");
-					JSONObject cin = rep.getJSONObject("m2m:cin");
-					String pi = cin.getString("pi");
-					String reply = cin.getString("con");
-					String parent = cin.getString("pi");
-					// resource container
-					Container resourceContainer = Mca.getInstance().getContainer(Constants.MN_CSE_COAP, parent.substring(1));
-					// Mote container
-					String resParent = resourceContainer.getPi().substring(1);
-					Container moteContainer = Mca.getInstance().getContainer(Constants.MN_CSE_COAP, resParent);
-					Mote moteToUpdate = Adn.motes.get(moteContainer.getRn());
-					JSONObject fields = new JSONObject(reply);
-					moteToUpdate.setFieldFromJson(fields);
-					Adn.clientUpdate();
 
+					if (m2msgn.has("m2m:nev")) {
+						JSONObject nev = m2msgn.getJSONObject("m2m:nev");
+						JSONObject rep = nev.getJSONObject("m2m:rep");
+						JSONObject m2mcin = rep.getJSONObject("m2m:cin");
+						
+						String reply = m2mcin.getString("con");
+	
+						JSONObject m2mcont = new JSONObject(ADN.getMca().om2mRequest("GET", 0, Constants.IN_CSE_COAP, m2mcin.getString("pi").substring(1), ""));
+						
+						m2mcont = m2mcont.getJSONObject("m2m:cnt");
+						System.out.println(m2mcont);
+						String[] uri = m2mcont.getString("rn").split("-");
+												
+						String uri_mote = null;
+						for (String string : uri) {
+							if (string.contains("Mote")) {
+								uri_mote = string;
+								break;
+							}
+						}
+				
+						String uri_res = null;
+						for (String string : uri) {
+							if (string.contains("sensor"))
+								uri_res = string;
+						}
+	
+						System.out.println("New content: " + reply);
+	
+						for (int i = 0; i < ADN.getMotes().size(); i++) {
+	
+				
+							if (ADN.getMotes().get(i).name.equals(uri_mote)) {
+								ADN.getMotes().get(i).mutex.doWait();
+								ADN.getMotes().get(i).setMoteResource(reply, uri_res.replace("sensor_", ""));
+								ADN.getMotes().get(i).mutex.doNotify();
+																
+								if (WebServer.currentSession != null) {
+									String str = ADN.getMotes().get(i).toJSON();
+									
+									JSONObject object = new JSONObject();
+									object.put("data", new JSONObject(str));
+									object.put("action", "PUT");
+								
+									WebServer.send(object.toString());
+								}
+							}
+						}
+					}
 				} catch (JSONException e) {
-					System.err.println(e.getMessage());
 					e.printStackTrace();
-//					System.exit(-1);
 				}
 			}
-			
-			@Override
+
 			public void handleGET(CoapExchange exchange) {
-				exchange.respond("handleGet");
+				exchange.respond("handleGET(CoapExchange exchange)");
 			}
-			
+
+		}
+
+	}
+
+	public CoapMonitorThread(String name) {
+		this.name = name;
+	}
+
+	public void run() {
+		CoapMonitor server;
+		try {
+			server = new CoapMonitor(this.name);
+			server.addEndpoints();
+			server.start();
+		} catch (SocketException e) {
+			e.printStackTrace();
 		}
 	}
+
 }

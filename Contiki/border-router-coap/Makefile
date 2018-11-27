@@ -1,7 +1,7 @@
 CONTIKI_PROJECT=border-router-coap
 all: $(CONTIKI_PROJECT) 
 
-CONTIKI= /home/universita/git/contiki/
+CONTIKI=../../../git/contiki/
 
 #linker optimizations
 SMALL=1
