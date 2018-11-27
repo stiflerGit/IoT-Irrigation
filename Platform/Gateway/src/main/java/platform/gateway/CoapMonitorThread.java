@@ -84,10 +84,13 @@ public class CoapMonitorThread extends Thread {
 				JSONObject root = new JSONObject(reply);
 				String message = get_message(root, uri_res);
 				CoapResponse response = client.post(message, MediaTypeRegistry.TEXT_PLAIN);
+				
+				response = client.get();
+				
 				ADN.getMca().createContentInstance(Constants.MN_CSE_URI + "/" + ADN.getAE().getRn() + "/"
-							+ uri_mote + "/" + uri_mote + "-" + uri_res, 
-							"{'" + uri_res.substring(uri_res.lastIndexOf("_") + 1, uri_res.length()) + ":'" + 
-							message.substring(message.lastIndexOf("=") + 1, message.length()) + "'}");
+							+ uri_mote + "/" + uri_mote + "-" + uri_res, response.getResponseText());
+							//"{'" + uri_res.substring(uri_res.lastIndexOf("_") + 1, uri_res.length()) + "':'" + 
+							//message.substring(message.lastIndexOf("=") + 1, message.length()) + "'}");
 				System.out.println(response.getResponseText());
 			}
 			
