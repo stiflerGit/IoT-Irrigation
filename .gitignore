@@ -19,3 +19,6 @@ symbols.h
 # Maven
 log/
 target/
+
+# swp files
+*.swp
