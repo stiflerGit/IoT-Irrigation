@@ -1,124 +1,148 @@
-/*
-    Server to Client
+angular.module('Application', ['ngWebSocket'])
 
- * update one or more fields of a mote
-    {   "action" : "update" , 
-        "motes": [mote_type]  
-    }
-===================================================
-    mote_type definition:
-    {"id": "moteid", "battery": batterylvl, ... }
-    moteid is mandatory, others value are optional
-===================================================
- * add one or more motes to the list of motes
-    {   "action":"newMotes", 
-        "motes": [mote_type]
-    }
-===================================================
-* remove one or more motes from the list of motes
-    {   "action":"rmMotes",
-        "motes": ["moteid"]
-    }
-===================================================
-* list of actually presents motes (in response
-    to a get request)
+.controller("Controller", function($scope, $websocket) {
 
-    {   "action":"list",
-        "motes": [mote_type]
-    }
-*/
+    $scope.motes = [];
 
-/*
-    Client to Server
+    $scope.currentMote = null;
 
- * request the list of motes
-    {"action":"getList"}
-===================================================
- * change some parater of a given mote
-    {   "action":"update"
-        "mote": mote_type} 
-*/
+    $scope.hideManagement = true;
 
-var app = angular.module("myApp", ['ngWebSocket']);
+    var ws = $websocket('ws://127.0.0.1:8000/');
 
-app.constant("baseUrl", "ws://localhost:8000/motes");
 
-app.controller("myCtrl", function ($scope, $websocket, baseUrl) {
+    ws.onMessage(function(message) {
 
-	$scope.motes = [];
+        var object = JSON.parse(message.data);
 
-	$scope.currentMote = null;
-
-	var ws = $websocket(baseUrl);
-
-	ws.onMessage(function(message) {
-        var data = angular.fromJson(message.data)
-        var action = data["action"];
-        var motesList = [];
-        angular.forEach(data["motes"], function(mote){
-            motesList.push(JSON.parse(mote));
-        });
-        console.log(data);
-        if (action == "newMotes"){
-            // add new motes body
-            for (var i = 0; i <= message.motes.length; i++) {
-                // $scope.motes.push(JSON.parse(data["oomotes[i]));
-            }
-        }else if (action == "rmMotes") {
-            // remove motes body
-            var arr = JSON.parse(message.data.motes);
-            if (!arr.isArray()){
-                console.log("ERROR MOTES NOT PRESENT IN RMOTES");
-                console.log(arr);
-            }
-            for(moteid in arr) {
-                var index = $scope.motes.indexOf(moteid);
-                $scope.motes.splice(index, 1);
-            }
-        }else if (action == "list") {
-            // list motes body
-            $scope.motes = motesList;
-        }else if (action == "update") {
-            // update motes body
-            angular.forEach(motesList, function(mote) {
-                var toModify = getMote(mote);
-                if (toModify != null){
-                    toModify = mote;
+        if (object["action"] == "POST") {
+            $scope.motes.push(new Mote(object["data"]["name"]));
+            for (var key in object["data"]) {
+                if (key != "mutex" && key != "updated") {
+                    if (object["data"].hasOwnProperty(key)) {
+                        if (key == "position") {
+                            for (var key2 in object["data"][key]) {
+                                if (object["data"][key].hasOwnProperty(key2))
+                                    updateMote($scope.motes[$scope.motes.length - 1], key2, object["data"][key][key2]);
+                            }
+                        }
+                        updateMote($scope.motes[$scope.motes.length - 1], key, object["data"][key]);
+                    }
                 }
-            });
-        }   
+            }
+        }
+
+        else if (object["action"] == "PUT") {
+
+            var idx = findMote($scope.motes, object["data"]["name"]);
+
+            if (idx != -1) {
+                for (var key in object["data"]["updated"]) {
+                    if (object["data"]["updated"].hasOwnProperty(key)) {
+                        if (object["data"]["updated"][key] == true) {
+                            if (key == "position") {
+                                for (var key2 in object["data"][key]) {
+                                    if (object["data"][key].hasOwnProperty(key2))
+                                        updateMote($scope.motes[idx], key2, object["data"][key][key2]);
+                                }
+                            }
+                            updateMote($scope.motes[idx], key, object["data"][key]);
+                        }
+                    }
+                }
+            }
+        }
+
+    
+        else if (object["action"] == "DELETE") {
+            var idx = findMote($scope.motes, object["data"]["name"]);
+            $scope.motes.splice(idx, 1);
+            if ($scope.currentMote == $scope.motes[idx]) {
+                $scope.currentMote = null;
+                $scope.hideManagement = true;
+            }
+        }
+
     });
 
-	var get = function() {
-          	ws.send(angular.toJson({ action: 'get' }));
-    };
 
-    $scope.isMoteSelected = function () {
-        if($scope.currentMote != null)
-            return true
-    };
+    ws.onClose(function(){
+        ws.close();
+    });
 
-    $scope.updateIrrigation = function(irrigationValue) {
-        if(irrigationValue => 0 && irrigationValue <= 10) {
-            var moteUpd = angular.copy($scope.currentMote);
-            moteUpd["irrigation"] = $scope.irrigationValue;
-            console.log(JSON.stringify({action:"update", mote: moteUpd}))
-            ws.send(JSON.stringify({action:"update", mote: moteUpd}));
-        }
-    };
 
-    $scope.setCurrentMote = function(mote) {
-        $scope.currentMote = mote;
+    function send(mote) {
+        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
+        ws.send(JSON.stringify(obj));
+
     }
 
-    function getMote(moteid){
-        angular.forEach($scope.motes, function(mote) {
-            if(mote["id"] == moteid)
-                return mote;
-        });
-        return null;
-    };
+    $scope.selectMote = function(mote) {
+        $scope.currentMote = mote;
+        $scope.hideManagement = false;
+    }
 
-    get();
+
+    $scope.setType = function(t) {
+        for (var i = 0; i < $scope.motes.length; i++) {
+            if ($scope.motes[i].nome == $scope.currentMote.nome)
+                break;
+        }
+
+        $scope.motes[i].tipo = t;
+        $scope.motes[i].updated.tipo = true;
+        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
+        ws.send(JSON.stringify(obj));
+
+        $scope.motes[i].updated.tipo = false;
+        
+        $scope.currentMote = null;
+        $scope.hideManagement = true;
+    }
+
+
+    $scope.setIrrigation = function(t) {
+        for (var i = 0; i < $scope.motes.length; i++) {
+            if ($scope.motes[i].nome == $scope.currentMote.nome)
+                break;
+        }
+
+        $scope.motes[i].irrigation = t;
+        $scope.motes[i].updated.irrigation = true;
+
+        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
+        ws.send(JSON.stringify(obj));
+
+        $scope.motes[i].updated.irrigation = false;
+        
+        $scope.currentMote = null;
+        $scope.hideManagement = true;
+    }
+
+
+    $scope.setParams = function(t1, t2) {
+        for (var i = 0; i < $scope.motes.length; i++) {
+            if ($scope.motes[i].nome == $scope.currentMote.nome)
+                break;
+        }
+        
+        $scope.motes[i].tipo = t1;
+        $scope.motes[i].updated.tipo = true;
+        $scope.motes[i].irrigation = t2;
+        $scope.motes[i].updated.irrigation = true;
+        
+        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
+        ws.send(JSON.stringify(obj));
+
+        $scope.motes[i].updated.irrigation = false;
+        $scope.motes[i].updated.tipo = false;
+
+        $scope.currentMote = null;
+        $scope.hideManagement = true;
+
+    }
+
+
 
 });
+

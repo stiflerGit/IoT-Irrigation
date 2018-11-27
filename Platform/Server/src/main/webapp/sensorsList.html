@@ -37,7 +37,7 @@ License: https://bootstrapmade.com/license/
 
 </head>
 
-<body ng-app="myApp" ng-controller="myCtrl">
+<body ng-app="Application" ng-controller="Controller">
 
   <header id="header" class="header header-hide">
     <div class="container">
@@ -76,26 +76,31 @@ Sensors List
 =========================== -->
 
 <section class="padd-section text-center wow fadeInUp">
-  <h1>Sensors List</h1> 
+  <h1 class="section-title">Sensors List</h1> 
   <div class="container">
-    <table class="table">
-      <thead>
-        <tr>
+    <table class="table table-bordered table-hover">
+      <caption>List of Sensors</caption>
+      <thead class="thead-dark">
+        <tr class="wow">
+          <th>Name</th>
           <th>Type</th>
-          <th>Position: Latitude, Longitude</th>
           <th>Battery</th>
-          <th>Humidity</th>
+          <th>Position: Latitude, Longitude</th>
           <th>Temperature</th>
+          <th>Humidity</th>
+          <th>Irrigation</th>
         </tr>
       </thead>
       <tbody>
-          <tr ng-repeat="mote in motes" ng-click="setCurrentMote(mote)">
-            <td>{{mote.id}}</td>
-            <td>{{mote.latitude}}, {{mote.longitude}}</td>
-            <td>{{mote.battery}}</td>
-            <td>{{mote.humidity}}</td>
-            <td>{{mote.temperature}}</td>
-          </tr>
+        <tr ng-repeat="mote in motes" ng-click="selectMote(mote)">
+          <td>{{mote.nome}}</td>
+          <td>{{mote.tipo}}</td>
+          <td>{{mote.battery}}</td>
+          <td>{{mote.position.lat}}, {{mote.position.lng}}</td>
+          <td>{{mote.temperature}}</td>
+          <td>{{mote.humidity}}</td>
+          <td>{{mote.irrigation}}</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -105,13 +110,48 @@ Sensors List
 Sensor Details
 =========================== -->
 
-<section class="padd-section text-center wow fadeInUp" ng-hide="!isMoteSelected()">
+<section class="padd-section text-left wow fadeInUp" ng-hide="hideManagement">
   <div class="container">
-    <div class="jumbotron">
-      <h1>Sensor Management</h1>
-      <div>
+    <div class="jumbotron text-center">
+      <h1>Sensor Management: {{currentMote.nome}}</h1>
+    </div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8">
+          
+          
+          <input type="submit" value="Change" ng-click="setParams(tipo, irrigation)">
+          <div>
+            <h2>Type</h2>
+            <input type="text" ng-model="tipo">
+            <input type="submit" value="Set" ng-click="setType(tipo)">
+          </div>
+          <div>
+            <h2>Position</h2>
+          </div>
+          <div>
+            <h2>Battery Percentage</h2>
+          </div>
+          <div>
+            <h2>Humidity</h2>
+          </div>
+          <div>
+            <h2>Temperature</h2>
+          </div>
+          <div>
+            <h2>Irrigation</h2>
+            <input type="text" ng-model="irrigation">
+            <input type="submit" value="Set" ng-click="setIrrigation(irrigation)">
+          </div>
+        </div>
+        <div class="col-lg-4"> 
+          <figure class="figure">
+            <img  class="figure-img img-fluid rounded" src="img/svg/rural_bg.png"> 
+          </figure> 
+        </div>
       </div>
-    </section>
+    </div>
+  </section>
 
 <!--==========================
 Footer
@@ -228,6 +268,8 @@ Designed by <a href="https://bootstrapmade.com/">BootstrapMade</a>
 <script type="text/javascript" src="lib/angularJs/angular-websocket.js"></script>
 <!-- Sensor Javascript File -->
 <script type="text/javascript" src="js/sensorsList.js"></script>
+<!-- Mote Javascript Class -->
+<script type="text/javascript" src="js/sensor.js"></script>
 <!-- Template Main Javascript File -->
 <script src="js/main.js"></script>
 
