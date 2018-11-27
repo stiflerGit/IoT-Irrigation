@@ -8,7 +8,7 @@ angular.module('Application', ['ngWebSocket'])
 
     $scope.hideManagement = true;
 
-    var ws = $websocket('ws://127.0.0.1:8000/');
+    var ws = $websocket('ws://127.0.0.1:8000/motes/');
 
 
     ws.onMessage(function(message) {

@@ -3,7 +3,11 @@ package platform.server;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.websocket.server.WebSocketHandler;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.json.JSONException;
@@ -110,6 +114,11 @@ public class ADN {
 		initMotes(Constants.IN_CSE_COAP + "/" + Constants.MN_CSE_ID);
 		
 		Server server = new Server(8000);
+		
+		ResourceHandler resource_handler = new ResourceHandler();
+		resource_handler.setDirectoriesListed(true);
+		resource_handler.setWelcomeFiles(new String[] { "index.html" });
+		resource_handler.setResourceBase("./src/main/webapp/");
 
 		WebSocketHandler wsHandler = new WebSocketHandler() {
 			@Override
@@ -117,8 +126,16 @@ public class ADN {
 				factory.register(WebServer.class);
 			}
 		};
+		
+		ContextHandler context = new ContextHandler();
+		context.setContextPath("/motes");
+		context.setHandler(wsHandler);
+		
+		HandlerList handlers = new HandlerList();
+		handlers.setHandlers(new Handler[] { resource_handler, context });
+		server.setHandler(handlers);
 
-		server.setHandler(wsHandler);
+		server.setHandler(handlers);
 		server.start();
 		//server.join();
 	}
