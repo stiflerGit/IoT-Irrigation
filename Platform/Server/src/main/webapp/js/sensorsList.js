@@ -87,7 +87,7 @@ angular.module('Application', ['ngWebSocket'])
         }
 
         send(mote, $scope.websocket);
-        $scope.currentMote = null;
+        //$scope.currentMote = null;
     }
 
 

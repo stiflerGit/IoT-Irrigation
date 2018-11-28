@@ -38,12 +38,16 @@ public class Mote {
 		public boolean humidity;
 		public boolean battery;
 		public boolean position;
+		public boolean type;
+		public boolean irrigation;
 	
 		public Updated() {
 			temperature = false;
 			battery = false;
 			humidity = false;
 			position = false;
+			type = false;
+			irrigation = false;
 		}
 
 	}
@@ -71,10 +75,10 @@ public class Mote {
 		
 		if (res.equals("type")) {
 			this.type = object.getString("type");
-
+			this.updated.type = true;
 		} else if (res.equals("irrigation")) {
 			this.irrigation = object.getInt("irrigation");
-
+			this.updated.irrigation = true;
 		} else if (res.equals("battery")) {
 			this.battery = object.getInt("battery");
 			this.updated.battery = true;
@@ -98,6 +102,8 @@ public class Mote {
 		this.updated.battery = false;
 		this.updated.humidity = false;
 		this.updated.position = false;
+		this.updated.type = false;
+		this.updated.irrigation = false;
 		return json;
 	}
 
