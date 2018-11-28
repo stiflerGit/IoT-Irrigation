@@ -79,7 +79,7 @@ public class CoapMonitorThread extends Thread {
 					System.err.println("Invalid URI: " + e.getMessage());
 					System.exit(-1);
 				}
-				System.out.println("MOTE_POST_START: " + uri);
+
 				CoapClient client = new CoapClient(uri);
 				JSONObject root = new JSONObject(reply);
 				String message = get_message(root, uri_res);

@@ -90,10 +90,8 @@ public class DiscoverThread extends Thread {
 
 					if (resource_mn != null && resource_mn.size() > 0) {
 						ArrayList<String> subs = new ArrayList<String>(resource_mn);
-						for (int i = 0; i < resource_mn.size(); i++) {
+						for (int i = 0; i < resource_mn.size(); i++)
 							resource_mn.set(i, resource_mn.get(i).substring(resource_mn.get(i).lastIndexOf("-") + 1));
-							System.out.println(resource_mn.get(i));
-						}
 
 						for (String res : resource_mn) {
 
@@ -116,6 +114,7 @@ public class DiscoverThread extends Thread {
 					resource_mn = ADN.getMca().discoverResources(mn_cse, "?fu=1&rty=3&lbl=actuator-" + mote);
 
 					if (resource_mn != null && resource_mn.size() > 0) {
+						ArrayList<String> subs = new ArrayList<String>(resource_mn);
 						for (int i = 0; i < resource_mn.size(); i++)
 							resource_mn.set(i, resource_mn.get(i).substring(resource_mn.get(i).lastIndexOf("-") + 1));
 
@@ -129,12 +128,14 @@ public class DiscoverThread extends Thread {
 								ADN.getMotes().get(ADN.getMotes().size() - 1).setMoteResource(response, res.replace("actuator_", ""));
 								
 							}
-							ADN.getContainers().add(ADN.getMca().createContainer(cse + "/" + mote, mote + "-" + res, "actuator-" + mote));
-							//ADN.MCA.createContentInstance(Constants.IN_CSE_COAP + "/" + Constants.IN_CSE_ID + "/" + ADN.AE_Controller.getRn() + "/" + ADN.containers.get(ADN.containers.size() - 1).getRn(),
-								//	"{\"type\":\"" + mote.split("_")[1] + "\",\"" + mote.split("_")[2] + "\"}");
+								ADN.getContainers().add(ADN.getMca().createContainer(cse + "/" + mote, mote + "-" + res, "actuator-" + mote));
+
+								ADN.getMca().createSubscription(Constants.MN_CSE_COAP + subs.get(resource_mn.indexOf(res)), "Subscription-" + mote + "-" + res,
+										"coap://127.0.0.1:" + Constants.IN_COAP_PORT + "/CoapMonitorServer");
+								ADN.getSubscriptions().add("Subscription-" + mote + "-" + res);
+								System.out.println("Subscribed to: " + Constants.MN_CSE_COAP + subs.get(resource_mn.indexOf(res)));
 						}
 					}
-
 					
 					// WEBSOCKET POST
 					if (WebServer.currentSession != null) {

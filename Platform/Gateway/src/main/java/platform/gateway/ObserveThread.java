@@ -75,7 +75,6 @@ public class ObserveThread extends Thread {
 
 		this.client = new CoapClient(uri);
 		this.handler = new ObserveHandler(semaphore, uri.toString());
-		System.out.println(this.container_cse);
 	}
 
 	
@@ -88,7 +87,7 @@ public class ObserveThread extends Thread {
 	public void run() {
 		this.relation = this.client.observe(this.handler);
 		
-		while(!this.stop) {
+		while (!this.stop) {
 			this.semaphore.doWait();
 			String content = handler.getContent();
 

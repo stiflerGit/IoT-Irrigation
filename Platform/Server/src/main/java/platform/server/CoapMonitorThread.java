@@ -85,7 +85,7 @@ public class CoapMonitorThread extends Thread {
 				
 						String uri_res = null;
 						for (String string : uri) {
-							if (string.contains("sensor"))
+							if (string.contains("sensor") || string.contains("actuator"))
 								uri_res = string;
 						}
 	
@@ -96,9 +96,9 @@ public class CoapMonitorThread extends Thread {
 				
 							if (ADN.getMotes().get(i).name.equals(uri_mote)) {
 								ADN.getMotes().get(i).mutex.doWait();
-								ADN.getMotes().get(i).setMoteResource(reply, uri_res.replace("sensor_", ""));
+								ADN.getMotes().get(i).setMoteResource(reply, uri_res.substring(uri_res.lastIndexOf("_") + 1, uri_res.length()));
 								ADN.getMotes().get(i).mutex.doNotify();
-																
+
 								if (WebServer.currentSession != null) {
 									String str = ADN.getMotes().get(i).toJSON();
 									

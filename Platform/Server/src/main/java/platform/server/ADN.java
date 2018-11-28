@@ -3,8 +3,8 @@ package platform.server;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
@@ -55,7 +55,6 @@ public class ADN {
 
 		while (root == null) {
 			String uri_res = Constants.MN_CSE_URI + "/" + ae + "/" + mote + "/" + mote + "-" + res;
-			System.out.println("getLa" + uri_res);
 			String response = MCA.om2mRequest("GET", 0, uri_res, "la", "");
 			if (response.equals("Resource not found"))
 				return null;
@@ -118,7 +117,7 @@ public class ADN {
 		ResourceHandler resource_handler = new ResourceHandler();
 		resource_handler.setDirectoriesListed(true);
 		resource_handler.setWelcomeFiles(new String[] { "index.html" });
-		resource_handler.setResourceBase("./src/main/webapp/");
+		resource_handler.setResourceBase("./WebApp/");
 
 		WebSocketHandler wsHandler = new WebSocketHandler() {
 			@Override
@@ -133,7 +132,6 @@ public class ADN {
 		
 		HandlerList handlers = new HandlerList();
 		handlers.setHandlers(new Handler[] { resource_handler, context });
-		server.setHandler(handlers);
 
 		server.setHandler(handlers);
 		server.start();

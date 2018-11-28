@@ -48,7 +48,7 @@ public class DiscoverThread extends Thread {
 								resource_in.set(i, resource_in.get(i).substring(resource_in.get(i).lastIndexOf("-") + 1));
 
 							for (String res : resource_in) {
-								if (!ADN.getSubscriptions().contains("Subscription-" + cont + "-" + res)) {
+								if (!ADN.getSubscriptions().contains("Subscription-" + cont + "-" + res) && ADN.getMoteUri().contains(cont)) {
 									ADN.getMca().createSubscription(Constants.IN_CSE_COAP + subs.get(resource_in.indexOf(res)), "Subscription-" + cont + "-" + res,
 											"coap://127.0.0.1:" + Constants.MN_COAP_PORT + "/CoapMonitorGateway");
 									ADN.getSubscriptions().add("Subscription-" + cont + "-" + res);

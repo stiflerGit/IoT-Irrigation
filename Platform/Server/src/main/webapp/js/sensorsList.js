@@ -1,3 +1,10 @@
+/*
+window.onbeforeunload = function() {
+    $websocket.onclose = function () {}; // disable onclose handler first
+    $websocket.close();
+};
+*/
+
 angular.module('Application', ['ngWebSocket'])
 
 .controller("Controller", function($scope, $websocket) {
@@ -6,12 +13,10 @@ angular.module('Application', ['ngWebSocket'])
 
     $scope.currentMote = null;
 
-    $scope.hideManagement = true;
-
-    var ws = $websocket('ws://127.0.0.1:8000/motes/');
+    $scope.websocket = $websocket('ws://127.0.0.1:8000/motes/');
 
 
-    ws.onMessage(function(message) {
+    $scope.websocket.onMessage(function(message) {
 
         var object = JSON.parse(message.data);
 
@@ -40,6 +45,7 @@ angular.module('Application', ['ngWebSocket'])
                 for (var key in object["data"]["updated"]) {
                     if (object["data"]["updated"].hasOwnProperty(key)) {
                         if (object["data"]["updated"][key] == true) {
+                            console.log(key + ": " + object["data"][key]);
                             if (key == "position") {
                                 for (var key2 in object["data"][key]) {
                                     if (object["data"][key].hasOwnProperty(key2))
@@ -66,83 +72,27 @@ angular.module('Application', ['ngWebSocket'])
     });
 
 
-    ws.onClose(function(){
-        ws.close();
+    $scope.websocket.onClose(function(){
+        $scope.websocket.close();
     });
 
 
-    function send(mote) {
-        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
-        ws.send(JSON.stringify(obj));
+    $scope.updateActuator = function(res, val) {
+        var mote = new Mote($scope.currentMote.nome);
+        if (Array.isArray(res)) {
+            for (var i = 0; i < res.length; i++)
+                updateMote(mote, res[i], val[i]);
+        } else {
+            updateMote(mote, res, val);
+        }
 
+        send(mote, $scope.websocket);
+        $scope.currentMote = null;
     }
+
 
     $scope.selectMote = function(mote) {
         $scope.currentMote = mote;
-        $scope.hideManagement = false;
     }
-
-
-    $scope.setType = function(t) {
-        for (var i = 0; i < $scope.motes.length; i++) {
-            if ($scope.motes[i].nome == $scope.currentMote.nome)
-                break;
-        }
-
-        $scope.motes[i].tipo = t;
-        $scope.motes[i].updated.tipo = true;
-        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
-        ws.send(JSON.stringify(obj));
-
-        $scope.motes[i].updated.tipo = false;
-        
-        // $scope.currentMote = null;
-        // $scope.hideManagement = true;
-    }
-
-
-    $scope.setIrrigation = function(t) {
-        for (var i = 0; i < $scope.motes.length; i++) {
-            if ($scope.motes[i].nome == $scope.currentMote.nome)
-                break;
-        }
-
-        $scope.motes[i].irrigation = t;
-        $scope.motes[i].updated.irrigation = true;
-
-        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
-        ws.send(JSON.stringify(obj));
-
-        $scope.motes[i].updated.irrigation = false;
-        
-        // $scope.currentMote = null;
-        // $scope.hideManagement = true;
-    }
-
-
-    $scope.setParams = function(t1, t2) {
-        for (var i = 0; i < $scope.motes.length; i++) {
-            if ($scope.motes[i].nome == $scope.currentMote.nome)
-                break;
-        }
-        
-        $scope.motes[i].tipo = t1;
-        $scope.motes[i].updated.tipo = true;
-        $scope.motes[i].irrigation = t2;
-        $scope.motes[i].updated.irrigation = true;
-        
-        var obj = {action:"PUT",data:JSON.parse(JSON.stringify($scope.motes[i]))};
-        ws.send(JSON.stringify(obj));
-
-        $scope.motes[i].updated.irrigation = false;
-        $scope.motes[i].updated.tipo = false;
-
-        // $scope.currentMote = null;
-        // $scope.hideManagement = true;
-
-    }
-
-
 
 });
-

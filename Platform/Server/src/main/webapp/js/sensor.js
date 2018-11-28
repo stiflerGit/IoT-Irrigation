@@ -50,6 +50,9 @@ function updateMote(mote, res, val) {
 }
 
 
-function selectMote(current, mote) {
-	current = mote;
+function send(mote, websocket) {
+	var obj = {action:"PUT",data:JSON.parse(JSON.stringify(mote))};
+	websocket.send(JSON.stringify(obj));
+	mote.updated.tipo = false;
+	mote.updated.irrigation = false;
 }

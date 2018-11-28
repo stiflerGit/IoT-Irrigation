@@ -79,8 +79,10 @@ public class WebServer {
 
 					String k = (key.equals("tipo")) ? "type" : key;
 					String content = "{'" + k + "':'" + data.get(key).toString() + "\'}";
-					
-					ADN.getMotes().get(i).setMoteResource(content, k);
+
+					//ADN.getMotes().get(i).mutex.doWait();
+					//ADN.getMotes().get(i).setMoteResource(content, k);
+					//ADN.getMotes().get(i).mutex.doNotify();
 					
 					ADN.getMca().createContentInstance(Constants.IN_CSE_URI + "/" + ADN.getAE().getRn() + "/"
 							+ ADN.getMotes().get(i).name + "/" + ADN.getMotes().get(i).name + "-actuator_" + k, content);
